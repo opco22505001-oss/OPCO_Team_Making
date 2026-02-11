@@ -3,398 +3,710 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>팀 랜덤 배치 시스템</title>
-    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>사다리 팀 배치</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        .setup-card { max-width: 500px; margin: 50px auto; }
+        h1 { font-size: 32px; color: #1f2937; margin-bottom: 8px; }
+        .subtitle { color: #6b7280; margin-bottom: 32px; }
+        .form-group { margin-bottom: 24px; }
+        label { display: block; font-weight: 600; color: #374151; margin-bottom: 8px; }
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        input:focus { outline: none; border-color: #3b82f6; }
+        .checkbox-group {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        .checkbox-label { display: flex; align-items: center; cursor: pointer; }
+        input[type="checkbox"] { width: 20px; height: 20px; margin-right: 12px; }
+        .info-box {
+            background: #dbeafe;
+            border: 2px solid #93c5fd;
+            border-radius: 8px;
+            padding: 16px;
+            color: #1e40af;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; width: 100%; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(59,130,246,0.3); }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .header-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+        .name-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .name-input-group label { font-size: 14px; }
+        .ladder-container { 
+            overflow-x: auto; 
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-top: 16px;
+        }
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .team-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .team-header {
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+        .team-header h3 { font-size: 24px; margin-bottom: 4px; }
+        .team-body { padding: 16px; }
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .member-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .debug-info {
+            background: #f3f4f6;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .debug-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .badge {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-error { background: #fee2e2; color: #991b1b; }
+        .hidden { display: none; }
+        .flex-between { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 16px; }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
-    
-    <script type="text/babel">
-        const { useState } = React;
+    <div class="container">
+        <!-- 설정 화면 -->
+        <div id="setupScreen" class="setup-card card">
+            <h1>사다리 팀 배치</h1>
+            <p class="subtitle">사다리게임으로 팀을 배정합니다</p>
+            
+            <div class="form-group">
+                <label>총 인원 수</label>
+                <input type="number" id="totalPeople" value="40" min="2" max="200">
+            </div>
+            
+            <div class="form-group">
+                <label>팀 수</label>
+                <input type="number" id="numTeams" value="10" min="2" max="20">
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="useNames">
+                    <span>참가자 이름 입력하기</span>
+                </label>
+            </div>
+            
+            <div class="info-box" id="previewInfo"></div>
+            
+            <button class="btn btn-primary" onclick="proceedNext()" style="margin-top: 24px;">
+                다음
+            </button>
+        </div>
 
-        const TeamRandomAssignment = () => {
-            const [gameState, setGameState] = useState('setup'); // 'setup', 'nameInput', 'result'
-            const [totalPeople, setTotalPeople] = useState('40');
-            const [numTeams, setNumTeams] = useState('10');
-            const [useNames, setUseNames] = useState(false);
-            const [participantNames, setParticipantNames] = useState([]);
-            const [teamAssignments, setTeamAssignments] = useState([]);
+        <!-- 이름 입력 화면 -->
+        <div id="nameScreen" class="card hidden">
+            <h1>참가자 이름 입력</h1>
+            <p class="subtitle">총 <span id="nameCount"></span>명의 이름을 입력해주세요</p>
+            
+            <div id="nameGrid" class="name-grid"></div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-secondary" onclick="goToSetup()">이전</button>
+                <button class="btn btn-primary" onclick="startLadder()" style="flex: 1;">사다리게임 시작</button>
+            </div>
+        </div>
 
-            const teamColors = [
-                '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
-                '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
-                '#F8B88B', '#AAB7B8', '#E74C3C', '#3498DB',
-                '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C'
-            ];
-
-            const assignTeams = (people, teams) => {
-                // 참가자 번호를 랜덤하게 섞기
-                const participants = Array.from({ length: people }, (_, i) => i + 1);
-                for (let i = participants.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [participants[i], participants[j]] = [participants[j], participants[i]];
-                }
-
-                // 팀에 배정
-                const assignments = [];
-                const membersPerTeam = Math.ceil(people / teams);
-
-                for (let i = 0; i < people; i++) {
-                    const teamIdx = Math.floor(i / membersPerTeam);
-                    const participantNum = participants[i];
-                    const participantName = useNames ? participantNames[participantNum - 1] : '';
-                    assignments.push({
-                        participantNum,
-                        name: participantName && participantName.trim() !== '' ? participantName : `참가자 ${participantNum}`,
-                        teamIdx: teamIdx < teams ? teamIdx : teams - 1,
-                        memberIdx: (i % membersPerTeam) + 1
-                    });
-                }
-
-                return assignments;
-            };
-
-            const proceedToNameInput = () => {
-                const people = parseInt(totalPeople);
-                const teams = parseInt(numTeams);
-
-                if (isNaN(people) || people < 2) {
-                    alert('인원수는 2명 이상이어야 합니다!');
-                    return;
-                }
-
-                if (isNaN(teams) || teams < 2) {
-                    alert('팀 수는 2팀 이상이어야 합니다!');
-                    return;
-                }
-
-                if (people < teams) {
-                    alert('인원수는 팀 수보다 많아야 합니다!');
-                    return;
-                }
-
-                if (useNames) {
-                    const names = Array.from({ length: people }, () => '');
-                    setParticipantNames(names);
-                    setGameState('nameInput');
-                } else {
-                    startAssignment(people, teams);
-                }
-            };
-
-            const startAssignment = (people, teams) => {
-                const assignments = assignTeams(people, teams);
-                setTeamAssignments(assignments);
-                setGameState('result');
-            };
-
-            const startFromNames = () => {
-                const people = parseInt(totalPeople);
-                const teams = parseInt(numTeams);
-                startAssignment(people, teams);
-            };
-
-            const reshuffleTeams = () => {
-                const people = parseInt(totalPeople);
-                const teams = parseInt(numTeams);
-                const assignments = assignTeams(people, teams);
-                setTeamAssignments(assignments);
-            };
-
-            const resetGame = () => {
-                setGameState('setup');
-                setUseNames(false);
-                setParticipantNames([]);
-                setTeamAssignments([]);
-            };
-
-            const exportToExcel = () => {
-                let csvContent = '\uFEFF'; // UTF-8 BOM
-                csvContent += '참가자 번호,이름,팀\n';
-
-                teamAssignments.forEach((assignment) => {
-                    csvContent += `${assignment.participantNum},${assignment.name},팀 ${assignment.teamIdx + 1}\n`;
-                });
-
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', '팀_배치_결과.csv');
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
-
-            // 팀별로 그룹화
-            const getTeamGroups = () => {
-                const groups = {};
-                teamAssignments.forEach((assignment) => {
-                    if (!groups[assignment.teamIdx]) {
-                        groups[assignment.teamIdx] = [];
-                    }
-                    groups[assignment.teamIdx].push(assignment);
-                });
-                return groups;
-            };
-
-            // 설정 화면
-            if (gameState === 'setup') {
-                return (
-                    <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
-                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-                            <div className="text-center mb-8">
-                                <div className="inline-block p-4 bg-blue-100 rounded-full mb-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
-                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="9" cy="7" r="4"></circle>
-                                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                    </svg>
-                                </div>
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">팀 랜덤 배치</h1>
-                                <p className="text-gray-600">참가자를 랜덤으로 팀에 배치합니다</p>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        총 인원 수
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="2"
-                                        max="200"
-                                        value={totalPeople}
-                                        onChange={(e) => setTotalPeople(e.target.value)}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">2~200명</p>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        팀 수
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="2"
-                                        max="20"
-                                        value={numTeams}
-                                        onChange={(e) => setNumTeams(e.target.value)}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">2~20팀</p>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
-                                    <label className="flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={useNames}
-                                            onChange={(e) => setUseNames(e.target.checked)}
-                                            className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        <span className="ml-3 text-gray-700 font-medium">참가자 이름 입력하기</span>
-                                    </label>
-                                    <p className="text-xs text-gray-500 mt-2 ml-8">
-                                        체크하면 각 참가자의 이름을 입력할 수 있습니다
-                                    </p>
-                                </div>
-
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <p className="text-sm text-blue-800">
-                                        • 팀당 약 {Math.ceil((parseInt(totalPeople) || 0) / (parseInt(numTeams) || 1))}명씩 배정됩니다<br/>
-                                        • 참가자는 완전 랜덤으로 팀에 배치됩니다
-                                    </p>
-                                </div>
-
-                                <button
-                                    onClick={proceedToNameInput}
-                                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl"
-                                >
-                                    {useNames ? (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                                <polyline points="12 5 19 12 12 19"></polyline>
-                                            </svg>
-                                            다음: 이름 입력
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                            </svg>
-                                            팀 배치 시작
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
+        <!-- 사다리게임 화면 -->
+        <div id="ladderScreen" class="hidden">
+            <div class="card">
+                <div class="flex-between">
+                    <div>
+                        <h1>사다리게임</h1>
+                        <p class="subtitle"><span id="ladderInfo"></span></p>
                     </div>
-                );
-            }
-
-            // 이름 입력 화면
-            if (gameState === 'nameInput') {
-                return (
-                    <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 overflow-auto">
-                        <div className="max-w-6xl mx-auto py-8">
-                            <div className="bg-white rounded-2xl shadow-2xl p-8">
-                                <div className="text-center mb-8">
-                                    <h1 className="text-3xl font-bold text-gray-800 mb-2">참가자 이름 입력</h1>
-                                    <p className="text-gray-600">총 {totalPeople}명의 이름을 입력해주세요</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-                                    {participantNames.map((name, idx) => (
-                                        <div key={idx}>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                참가자 {idx + 1}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={name}
-                                                onChange={(e) => {
-                                                    const newNames = [...participantNames];
-                                                    newNames[idx] = e.target.value;
-                                                    setParticipantNames(newNames);
-                                                }}
-                                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                                placeholder={`참가자 ${idx + 1}`}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={() => setGameState('setup')}
-                                        className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-4 rounded-lg font-bold text-lg transition-colors"
-                                    >
-                                        이전
-                                    </button>
-                                    <button
-                                        onClick={startFromNames}
-                                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                        </svg>
-                                        팀 배치 시작
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 결과 화면
-            const teamGroups = getTeamGroups();
-            const teams = parseInt(numTeams);
-
-            return (
-                <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 overflow-auto">
-                    <div className="max-w-7xl mx-auto py-8">
-                        <div className="bg-white rounded-2xl shadow-2xl p-8 mb-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-gray-800">팀 배치 결과</h1>
-                                    <p className="text-gray-600 mt-1">{numTeams}팀 · 총 {totalPeople}명</p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={exportToExcel}
-                                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-3 rounded-lg font-semibold transition-colors shadow-md"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                            <polyline points="7 10 12 15 17 10"></polyline>
-                                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                                        </svg>
-                                        엑셀 내보내기
-                                    </button>
-                                    <button
-                                        onClick={reshuffleTeams}
-                                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold transition-colors shadow-md"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="16 3 21 3 21 8"></polyline>
-                                            <line x1="4" y1="20" x2="21" y2="3"></line>
-                                            <polyline points="21 16 21 21 16 21"></polyline>
-                                            <line x1="15" y1="15" x2="21" y2="21"></line>
-                                            <line x1="4" y1="4" x2="9" y2="9"></line>
-                                        </svg>
-                                        다시 섞기
-                                    </button>
-                                    <button
-                                        onClick={resetGame}
-                                        className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-5 py-3 rounded-lg font-semibold transition-colors shadow-md"
-                                    >
-                                        처음으로
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {Array.from({ length: teams }).map((_, teamIdx) => {
-                                    const members = teamGroups[teamIdx] || [];
-                                    const color = teamColors[teamIdx % teamColors.length];
-
-                                    return (
-                                        <div key={teamIdx} className="bg-white rounded-xl shadow-lg border-2 overflow-hidden" style={{ borderColor: color }}>
-                                            <div className="p-4" style={{ backgroundColor: color }}>
-                                                <h2 className="text-xl font-bold text-white text-center">
-                                                    팀 {teamIdx + 1}
-                                                </h2>
-                                                <p className="text-white text-center text-sm mt-1">
-                                                    {members.length}명
-                                                </p>
-                                            </div>
-                                            <div className="p-4">
-                                                {members.length === 0 ? (
-                                                    <p className="text-gray-400 text-center py-4">배정된 멤버 없음</p>
-                                                ) : (
-                                                    <div className="space-y-2">
-                                                        {members.map((member, idx) => (
-                                                            <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: color }}>
-                                                                    {member.participantNum}
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <p className="font-semibold text-gray-800">{member.name}</p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h3 className="font-semibold text-gray-700 mb-3 text-lg">📝 사용 방법</h3>
-                            <div className="text-gray-600 text-sm space-y-2">
-                                <p>• <strong>다시 섞기</strong>: 같은 설정으로 팀을 다시 랜덤 배치합니다</p>
-                                <p>• <strong>엑셀 내보내기</strong>: 배치 결과를 CSV 파일로 다운로드합니다</p>
-                                <p>• <strong>처음으로</strong>: 설정 화면으로 돌아가 인원수와 팀 수를 변경할 수 있습니다</p>
-                            </div>
-                        </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="reshuffleLadder()">사다리 섞기</button>
+                        <button class="btn btn-success" onclick="goToResult()">팀 배치 결과 →</button>
+                        <button class="btn btn-secondary" onclick="reset()">처음으로</button>
                     </div>
                 </div>
-            );
+                
+                <div id="selectedInfo" class="info-box hidden" style="margin-top: 16px;"></div>
+                
+                <div class="debug-info">
+                    <strong>✅ 디버그: 팀별 하단 슬롯 개수 (목표 인원과 일치해야 함)</strong>
+                    <div id="debugBadges" class="debug-badges"></div>
+                </div>
+            </div>
+            
+            <div class="ladder-container">
+                <svg id="ladderSvg"></svg>
+            </div>
+        </div>
+
+        <!-- 결과 화면 -->
+        <div id="resultScreen" class="hidden">
+            <div class="card">
+                <div class="flex-between">
+                    <div>
+                        <h1>팀 배치 결과</h1>
+                        <p class="subtitle"><span id="resultInfo"></span></p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-success" onclick="exportToExcel()">엑셀 내보내기</button>
+                        <button class="btn btn-primary" onclick="goBackToLadder()">← 사다리게임</button>
+                        <button class="btn btn-secondary" onclick="reset()">처음으로</button>
+                    </div>
+                </div>
+                
+                <div class="debug-info">
+                    <strong>✅ 디버그: 팀별 실제 배정 인원</strong>
+                    <div id="resultDebugBadges" class="debug-badges"></div>
+                </div>
+            </div>
+            
+            <div id="teamGrid" class="team-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const teamColors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+            '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
+            '#F8B88B', '#AAB7B8', '#E74C3C', '#3B82F6',
+            '#10B981', '#F59E0B', '#8B5CF6', '#14B8A6'
+        ];
+
+        let state = {
+            totalPeople: 40,
+            numTeams: 10,
+            useNames: false,
+            names: [],
+            participantOrder: [],
+            teamSlots: [],
+            ladderLines: [],
+            results: [],
+            selectedPerson: null
         };
 
-        ReactDOM.render(<TeamRandomAssignment />, document.getElementById('root'));
+        // 초기 미리보기
+        updatePreview();
+        document.getElementById('totalPeople').addEventListener('input', updatePreview);
+        document.getElementById('numTeams').addEventListener('input', updatePreview);
+
+        function updatePreview() {
+            const people = parseInt(document.getElementById('totalPeople').value) || 0;
+            const teams = parseInt(document.getElementById('numTeams').value) || 1;
+            const base = Math.floor(people / teams);
+            const remainder = people % teams;
+            
+            let text = `팀당 ${base}명`;
+            if (remainder > 0) {
+                text += `, ${remainder}개 팀은 ${base + 1}명`;
+            }
+            document.getElementById('previewInfo').textContent = text;
+        }
+
+        function proceedNext() {
+            state.totalPeople = parseInt(document.getElementById('totalPeople').value);
+            state.numTeams = parseInt(document.getElementById('numTeams').value);
+            state.useNames = document.getElementById('useNames').checked;
+
+            if (state.totalPeople < 2 || state.numTeams < 2 || state.totalPeople < state.numTeams) {
+                alert('올바른 값을 입력해주세요!');
+                return;
+            }
+
+            if (state.useNames) {
+                showNameScreen();
+            } else {
+                state.names = Array.from({length: state.totalPeople}, (_, i) => `참가자 ${i+1}`);
+                startLadder();
+            }
+        }
+
+        function showNameScreen() {
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('nameScreen').classList.remove('hidden');
+            document.getElementById('nameCount').textContent = state.totalPeople;
+            
+            const grid = document.getElementById('nameGrid');
+            grid.innerHTML = '';
+            for (let i = 0; i < state.totalPeople; i++) {
+                grid.innerHTML += `
+                    <div class="name-input-group">
+                        <label>참가자 ${i+1}</label>
+                        <input type="text" id="name${i}" placeholder="참가자 ${i+1}">
+                    </div>
+                `;
+            }
+        }
+
+        function goToSetup() {
+            document.getElementById('nameScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.remove('hidden');
+        }
+
+        function startLadder() {
+            if (state.useNames) {
+                state.names = [];
+                for (let i = 0; i < state.totalPeople; i++) {
+                    const val = document.getElementById(`name${i}`).value.trim();
+                    state.names.push(val || `참가자 ${i+1}`);
+                }
+            }
+
+            generateLadder();
+            
+            document.getElementById('nameScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('ladderScreen').classList.remove('hidden');
+            
+            const base = Math.floor(state.totalPeople / state.numTeams);
+            const remainder = state.totalPeople % state.numTeams;
+            let info = `${state.numTeams}팀 · 총 ${state.totalPeople}명 · 팀당 ${base}명`;
+            if (remainder > 0) info += ` (${remainder}개 팀은 ${base+1}명)`;
+            document.getElementById('ladderInfo').textContent = info;
+            
+            drawLadder();
+            updateDebugInfo();
+            
+            console.log('=== 디버그 정보 ===');
+            console.log('팀 슬롯 배열:', state.teamSlots);
+            console.log('팀별 개수:', countTeams(state.teamSlots));
+        }
+
+        function generateLadder() {
+            const numRows = 30;
+            
+            // 1. 사다리 가로선 생성 (연속되지 않게!)
+            state.ladderLines = [];
+            for (let row = 0; row < numRows; row++) {
+                const rowLines = [];
+                let col = 0;
+                while (col < state.totalPeople - 1) {
+                    if (Math.random() > 0.5) {
+                        rowLines.push(col);
+                        col += 2; // 다음 가능한 위치로 점프 (겹치지 않게)
+                    } else {
+                        col += 1;
+                    }
+                }
+                state.ladderLines.push(rowLines);
+            }
+
+            // 2. 참가자 순서 랜덤
+            state.participantOrder = Array.from({length: state.totalPeople}, (_, i) => i);
+            for (let i = state.participantOrder.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [state.participantOrder[i], state.participantOrder[j]] = 
+                    [state.participantOrder[j], state.participantOrder[i]];
+            }
+
+            // 3. 팀 슬롯 생성 (핵심!)
+            const base = Math.floor(state.totalPeople / state.numTeams);
+            const remainder = state.totalPeople % state.numTeams;
+            
+            state.teamSlots = [];
+            for (let teamIdx = 0; teamIdx < state.numTeams; teamIdx++) {
+                // 뒤쪽 팀에 +1명씩 배정
+                const count = (teamIdx >= state.numTeams - remainder) ? base + 1 : base;
+                for (let i = 0; i < count; i++) {
+                    state.teamSlots.push(teamIdx);
+                }
+            }
+
+            console.log('생성된 팀 슬롯:', state.teamSlots);
+            console.log('예상 길이:', state.totalPeople, '실제 길이:', state.teamSlots.length);
+
+            // 4. 결과 계산
+            calculateResults();
+        }
+
+        function calculateResults() {
+            state.results = [];
+            
+            console.log('=== calculateResults 시작 ===');
+            console.log('teamSlots:', state.teamSlots);
+            console.log('teamSlots 길이:', state.teamSlots.length);
+            
+            for (let pIdx = 0; pIdx < state.totalPeople; pIdx++) {
+                const ladderCol = state.participantOrder.indexOf(pIdx);
+                const finalCol = tracePath(ladderCol);
+                
+                if (pIdx < 3) {
+                    console.log(`참가자 ${pIdx+1}: 시작열=${ladderCol}, 도착열=${finalCol}, 팀=${state.teamSlots[finalCol]}`);
+                }
+                
+                state.results.push({
+                    participantNum: pIdx + 1,
+                    name: state.names[pIdx],
+                    teamIdx: state.teamSlots[finalCol],
+                    ladderCol: ladderCol,
+                    finalCol: finalCol
+                });
+            }
+            
+            console.log('결과 샘플:', state.results.slice(0, 5));
+            const resultTeamCounts = countTeams(state.results.map(r => r.teamIdx));
+            console.log('결과별 팀 개수:', resultTeamCounts);
+        }
+
+        function tracePath(startCol) {
+            let col = startCol;
+            const debug = startCol === 0; // 첫 번째 참가자만 디버그
+            
+            if (debug) {
+                console.log(`=== tracePath 디버그 (시작열: ${startCol}) ===`);
+            }
+            
+            for (let row = 0; row < state.ladderLines.length; row++) {
+                const rowLines = state.ladderLines[row];
+                const prevCol = col;
+                
+                // 현재 위치에서 오른쪽으로 가로선이 있으면 오른쪽으로
+                if (rowLines.includes(col)) {
+                    col = col + 1;
+                    if (debug && row < 5) console.log(`Row ${row}: ${prevCol} → ${col} (오른쪽)`);
+                }
+                // 현재 위치 왼쪽에서 들어오는 가로선이 있으면 왼쪽으로
+                else if (col > 0 && rowLines.includes(col - 1)) {
+                    col = col - 1;
+                    if (debug && row < 5) console.log(`Row ${row}: ${prevCol} → ${col} (왼쪽)`);
+                }
+                else {
+                    if (debug && row < 5) console.log(`Row ${row}: ${prevCol} → ${col} (직진)`);
+                }
+            }
+            
+            if (debug) {
+                console.log(`최종 도착열: ${col}`);
+                console.log(`teamSlots[${col}] = 팀${state.teamSlots[col] + 1}`);
+            }
+            
+            return col;
+        }
+
+        function countTeams(arr) {
+            const counts = {};
+            arr.forEach(t => counts[t] = (counts[t] || 0) + 1);
+            return counts;
+        }
+
+        function drawLadder() {
+            const svg = document.getElementById('ladderSvg');
+            const width = state.totalPeople * 40 + 20;
+            const height = state.ladderLines.length * 25 + 140;
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            
+            let html = '';
+
+            // 상단: 참가자
+            state.participantOrder.forEach((pIdx, col) => {
+                const isSelected = state.selectedPerson === pIdx;
+                const name = state.names[pIdx];
+                const displayName = name.length > 6 ? name.substring(0, 6) + '..' : name;
+                
+                html += `
+                    <rect x="${col*40+10}" y="5" width="35" height="55" rx="5"
+                        fill="${isSelected ? '#3B82F6' : '#f3f4f6'}"
+                        stroke="${isSelected ? '#2563EB' : '#d1d5db'}"
+                        stroke-width="${isSelected ? 3 : 2}"
+                        style="cursor:pointer"
+                        onclick="selectPerson(${pIdx})"/>
+                    <text x="${col*40+27.5}" y="25" text-anchor="middle" font-size="10" font-weight="bold"
+                        fill="${isSelected ? 'white' : '#374151'}" style="cursor:pointer; pointer-events:none">
+                        ${pIdx + 1}
+                    </text>
+                    <text x="${col*40+27.5}" y="45" text-anchor="middle" font-size="8"
+                        fill="${isSelected ? 'white' : '#6b7280'}" style="pointer-events:none">
+                        ${displayName}
+                    </text>
+                `;
+            });
+
+            // 세로선
+            for (let i = 0; i < state.totalPeople; i++) {
+                html += `<line x1="${i*40+27.5}" y1="65" x2="${i*40+27.5}" y2="${state.ladderLines.length*25+65}" 
+                    stroke="#d1d5db" stroke-width="2"/>`;
+            }
+
+            // 가로선
+            state.ladderLines.forEach((rowLines, row) => {
+                rowLines.forEach(col => {
+                    html += `<line x1="${col*40+27.5}" y1="${row*25+77.5}" x2="${(col+1)*40+27.5}" y2="${row*25+77.5}"
+                        stroke="#9ca3af" stroke-width="3"/>`;
+                });
+            });
+
+            // 경로 그리기
+            if (state.selectedPerson !== null) {
+                const startCol = state.participantOrder.indexOf(state.selectedPerson);
+                let col = startCol;
+                
+                // 시작점에서 첫 가로선까지
+                html += `<line x1="${col*40+27.5}" y1="65" x2="${col*40+27.5}" y2="77.5" 
+                    stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+                
+                for (let row = 0; row < state.ladderLines.length; row++) {
+                    const rowLines = state.ladderLines[row];
+                    const y = row * 25 + 77.5;
+                    
+                    if (rowLines.includes(col)) {
+                        // 오른쪽으로 이동
+                        html += `<line x1="${col*40+27.5}" y1="${y}" x2="${(col+1)*40+27.5}" y2="${y}" 
+                            stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+                        col = col + 1;
+                        html += `<line x1="${col*40+27.5}" y1="${y}" x2="${col*40+27.5}" y2="${y+25}" 
+                            stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+                    } else if (col > 0 && rowLines.includes(col - 1)) {
+                        // 왼쪽으로 이동
+                        html += `<line x1="${col*40+27.5}" y1="${y}" x2="${(col-1)*40+27.5}" y2="${y}" 
+                            stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+                        col = col - 1;
+                        html += `<line x1="${col*40+27.5}" y1="${y}" x2="${col*40+27.5}" y2="${y+25}" 
+                            stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+                    } else {
+                        // 그대로 아래로
+                        html += `<line x1="${col*40+27.5}" y1="${y}" x2="${col*40+27.5}" y2="${y+25}" 
+                            stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+                    }
+                }
+                
+                // 마지막 세로선
+                html += `<line x1="${col*40+27.5}" y1="${state.ladderLines.length*25+77.5}" x2="${col*40+27.5}" y2="${state.ladderLines.length*25+65}" 
+                    stroke="#3B82F6" stroke-width="4" stroke-linecap="round" opacity="0.8"/>`;
+            }
+
+            // 하단: 팀 박스 (연속 구간)
+            let currentTeam = state.teamSlots[0];
+            let startCol = 0;
+            
+            for (let col = 1; col <= state.teamSlots.length; col++) {
+                if (col === state.teamSlots.length || state.teamSlots[col] !== currentTeam) {
+                    const width = (col - startCol) * 40 - 5;
+                    const x = startCol * 40 + 10;
+                    const color = teamColors[currentTeam % teamColors.length];
+                    
+                    const isDestination = state.selectedPerson !== null && 
+                        state.teamSlots[tracePath(state.participantOrder.indexOf(state.selectedPerson))] === currentTeam;
+                    
+                    html += `
+                        <rect x="${x}" y="${state.ladderLines.length*25+70}" width="${width}" height="45" rx="8"
+                            fill="${isDestination ? color : '#f9fafb'}"
+                            stroke="${color}" stroke-width="${isDestination ? 4 : 3}"/>
+                        <text x="${x + width/2}" y="${state.ladderLines.length*25+98}" 
+                            text-anchor="middle" font-size="16" font-weight="bold"
+                            fill="${isDestination ? 'white' : color}">
+                            팀 ${currentTeam + 1}
+                        </text>
+                    `;
+                    
+                    if (col < state.teamSlots.length) {
+                        currentTeam = state.teamSlots[col];
+                        startCol = col;
+                    }
+                }
+            }
+
+            svg.innerHTML = html;
+        }
+
+        function selectPerson(pIdx) {
+            state.selectedPerson = pIdx;
+            const result = state.results[pIdx];
+            document.getElementById('selectedInfo').classList.remove('hidden');
+            document.getElementById('selectedInfo').innerHTML = 
+                `<strong>${result.name}</strong> → <strong style="color: ${teamColors[result.teamIdx]}">팀 ${result.teamIdx + 1}</strong><br>
+                <small>사다리 위치: ${result.ladderCol}열 → 도착: ${result.finalCol}열</small>`;
+            drawLadder();
+        }
+
+        function updateDebugInfo() {
+            const slotCounts = countTeams(state.teamSlots);
+            const base = Math.floor(state.totalPeople / state.numTeams);
+            const remainder = state.totalPeople % state.numTeams;
+            
+            let html = '';
+            for (let t = 0; t < state.numTeams; t++) {
+                const expected = t >= (state.numTeams - remainder) ? base + 1 : base;
+                const actual = slotCounts[t] || 0;
+                const isCorrect = actual === expected;
+                html += `<span class="badge ${isCorrect ? 'badge-success' : 'badge-error'}" 
+                    style="border: 2px solid ${teamColors[t]}">
+                    팀${t+1}: ${actual}슬롯 ${isCorrect ? '✓' : '❌ (예상: '+expected+')'}
+                </span>`;
+            }
+            document.getElementById('debugBadges').innerHTML = html;
+        }
+
+        function reshuffleLadder() {
+            state.selectedPerson = null;
+            document.getElementById('selectedInfo').classList.add('hidden');
+            generateLadder();
+            drawLadder();
+            updateDebugInfo();
+        }
+
+        function goToResult() {
+            document.getElementById('ladderScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+            
+            const base = Math.floor(state.totalPeople / state.numTeams);
+            const remainder = state.totalPeople % state.numTeams;
+            let info = `${state.numTeams}팀 · 총 ${state.totalPeople}명 · 팀당 ${base}명`;
+            if (remainder > 0) info += ` (${remainder}개 팀은 ${base+1}명)`;
+            document.getElementById('resultInfo').textContent = info;
+            
+            displayResults();
+        }
+
+        function displayResults() {
+            const teamGroups = {};
+            state.results.forEach(r => {
+                if (!teamGroups[r.teamIdx]) teamGroups[r.teamIdx] = [];
+                teamGroups[r.teamIdx].push(r);
+            });
+
+            const base = Math.floor(state.totalPeople / state.numTeams);
+            const remainder = state.totalPeople % state.numTeams;
+            
+            let html = '';
+            for (let t = 0; t < state.numTeams; t++) {
+                const members = teamGroups[t] || [];
+                const expected = t >= (state.numTeams - remainder) ? base + 1 : base;
+                const color = teamColors[t % teamColors.length];
+                
+                html += `
+                    <div class="team-card" style="border: 2px solid ${color}">
+                        <div class="team-header" style="background: ${color}">
+                            <h3>팀 ${t + 1}</h3>
+                            <div>${members.length}명 ${members.length !== expected ? '❌ (목표: '+expected+'명)' : '✓'}</div>
+                        </div>
+                        <div class="team-body">
+                            ${members.map(m => `
+                                <div class="member-item">
+                                    <div class="member-num" style="background: ${color}">${m.participantNum}</div>
+                                    <div><strong>${m.name}</strong></div>
+                                </div>
+                            `).join('') || '<div style="color: #9ca3af; text-align: center; padding: 20px;">배정된 멤버 없음</div>'}
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('teamGrid').innerHTML = html;
+
+            // 디버그 정보
+            let debugHtml = '';
+            for (let t = 0; t < state.numTeams; t++) {
+                const members = teamGroups[t] || [];
+                const expected = t >= (state.numTeams - remainder) ? base + 1 : base;
+                const isCorrect = members.length === expected;
+                debugHtml += `<span class="badge ${isCorrect ? 'badge-success' : 'badge-error'}" 
+                    style="border: 2px solid ${teamColors[t]}">
+                    팀${t+1}: ${members.length}명 ${isCorrect ? '✓' : '❌ (예상: '+expected+'명)'}
+                </span>`;
+            }
+            document.getElementById('resultDebugBadges').innerHTML = debugHtml;
+            
+            console.log('=== 최종 결과 ===');
+            console.log('팀별 인원:', countTeams(state.results.map(r => r.teamIdx)));
+        }
+
+        function goBackToLadder() {
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('ladderScreen').classList.remove('hidden');
+        }
+
+        function exportToExcel() {
+            let csv = '\uFEFF참가자 번호,이름,팀\n';
+            
+            const sorted = [...state.results].sort((a, b) => {
+                if (a.teamIdx !== b.teamIdx) return a.teamIdx - b.teamIdx;
+                return a.participantNum - b.participantNum;
+            });
+            
+            sorted.forEach(r => {
+                csv += `${r.participantNum},${r.name},팀 ${r.teamIdx + 1}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '팀배치_결과.csv';
+            link.click();
+        }
+
+        function reset() {
+            location.reload();
+        }
     </script>
 </body>
 </html>
